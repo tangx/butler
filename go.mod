@@ -1,3 +1,3 @@
-module github.com/tangx/bulter
+module github.com/tangx/butler
 
 go 1.16

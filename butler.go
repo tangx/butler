@@ -1,17 +1,17 @@
-package bulter
+package butler
 
 import "log"
 
-type Bulter struct {
+type Butler struct {
 	workers     int
 	workerQueue chan *worker
 	jobs        int
 	jobQueue    chan func()
 }
 
-// New return a new Bulter
-func New(funcs ...OptionFunc) *Bulter {
-	b := &Bulter{}
+// New return a new Butler
+func New(funcs ...OptionFunc) *Butler {
+	b := &Butler{}
 
 	for _, fn := range funcs {
 		fn(b)
@@ -22,7 +22,7 @@ func New(funcs ...OptionFunc) *Bulter {
 }
 
 // Work start
-func (b *Bulter) Work() {
+func (b *Butler) Work() {
 
 	for worker := range b.workerQueue {
 		job := <-b.jobQueue
@@ -31,14 +31,14 @@ func (b *Bulter) Work() {
 	}
 }
 
-func (b *Bulter) AddJobs(funcs ...func()) {
+func (b *Butler) AddJobs(funcs ...func()) {
 	for _, fn := range funcs {
 		b.jobQueue <- fn
 	}
 }
 
-// initial bulter
-func (b *Bulter) initial() {
+// initial butler
+func (b *Butler) initial() {
 	if b.jobs == 0 {
 		b.jobs = 20
 	}
@@ -55,7 +55,7 @@ func (b *Bulter) initial() {
 }
 
 // assign a job to a worker
-func (b *Bulter) assign(w *worker, job func()) {
+func (b *Butler) assign(w *worker, job func()) {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println(err)
@@ -69,18 +69,18 @@ func (b *Bulter) assign(w *worker, job func()) {
 }
 
 // OptionFunc
-type OptionFunc = func(b *Bulter)
+type OptionFunc = func(b *Butler)
 
 // WithWorkers set concurrency worker numbers
 func WithWorkers(n int) OptionFunc {
-	return func(b *Bulter) {
+	return func(b *Butler) {
 		b.workers = n
 	}
 }
 
 // WithJobs set max jobs queue
 func WithJobs(n int) OptionFunc {
-	return func(b *Bulter) {
+	return func(b *Butler) {
 		b.jobs = n
 	}
 }

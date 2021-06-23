@@ -1,4 +1,4 @@
-package bulter
+package butler
 
 type worker struct{}
 

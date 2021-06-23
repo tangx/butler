@@ -1,4 +1,4 @@
-package bulter
+package butler
 
 import (
 	"fmt"
@@ -8,18 +8,18 @@ import (
 	"time"
 )
 
-func Test_Bulter(t *testing.T) {
-	bulter := New(WithJobs(20), WithWorkers(5))
+func Test_Butler(t *testing.T) {
+	butler := New(WithJobs(20), WithWorkers(5))
 
 	go func() {
 		for i := 0; i < 30; i++ {
 			fn := newJob()
-			bulter.AddJobs(fn)
+			butler.AddJobs(fn)
 			time.Sleep(time.Second * 1)
 		}
 	}()
 
-	bulter.Work()
+	butler.Work()
 
 }
 
