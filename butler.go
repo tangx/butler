@@ -12,9 +12,12 @@ type Butler struct {
 	jobQueue    chan func()
 }
 
-func New() *Butler {
+// Default return a butler , which workers' number is equal GOMAXPROC
+// and jobs' number is double of workers
+// https://golang.org/doc/effective_go#parallel
+func Default() *Butler {
 	b := &Butler{}
-	b.SetDefaults()
+	b.Init()
 	return b
 }
 

@@ -9,7 +9,8 @@ import (
 )
 
 func Test_Butler(t *testing.T) {
-	// b := New()
+	// b := Defualt()
+
 	b := &Butler{}
 	b.Init(WithJobs(20), WithWorkers(5))
 
