@@ -1,6 +1,9 @@
 package butler
 
-import "log"
+import (
+	"log"
+	"runtime"
+)
 
 type Butler struct {
 	workers     int
@@ -9,16 +12,19 @@ type Butler struct {
 	jobQueue    chan func()
 }
 
-// New return a new Butler
-func New(funcs ...OptionFunc) *Butler {
+func New() *Butler {
 	b := &Butler{}
+	b.SetDefaults()
+	return b
+}
 
+// Init return a new Butler
+func (b *Butler) Init(funcs ...OptionFunc) {
 	for _, fn := range funcs {
 		fn(b)
 	}
 
-	b.initial()
-	return b
+	b.init()
 }
 
 // Work start
@@ -37,16 +43,17 @@ func (b *Butler) AddJobs(funcs ...func()) {
 	}
 }
 
-// initial butler
-func (b *Butler) initial() {
-	if b.jobs == 0 {
-		b.jobs = 20
-	}
-	b.jobQueue = make(chan func(), b.jobs)
+// SetDefaults set default value for butler
+func (b *Butler) SetDefaults() {
+	b.workers = runtime.GOMAXPROCS(0)
+	b.jobs = b.workers * 2
+}
 
-	if b.workers == 0 {
-		b.workers = 5
-	}
+// init butler
+func (b *Butler) init() {
+	b.SetDefaults()
+
+	b.jobQueue = make(chan func(), b.jobs)
 	b.workerQueue = make(chan *worker, b.workers)
 	for i := 0; i < b.workers; i++ {
 		log.Println("register a new worker")

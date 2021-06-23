@@ -9,17 +9,19 @@ import (
 )
 
 func Test_Butler(t *testing.T) {
-	butler := New(WithJobs(20), WithWorkers(5))
+	// b := New()
+	b := &Butler{}
+	b.Init(WithJobs(20), WithWorkers(5))
 
 	go func() {
 		for i := 0; i < 30; i++ {
 			fn := newJob()
-			butler.AddJobs(fn)
+			b.AddJobs(fn)
 			time.Sleep(time.Second * 1)
 		}
 	}()
 
-	butler.Work()
+	b.Work()
 
 }
 
