@@ -29,12 +29,15 @@ func Default() *Butler {
 	return b
 }
 
-// Init return a new Butler
-func (b *Butler) Init(funcs ...OptionFunc) {
+// WithOptions return a new Butler
+func (b *Butler) WithOptions(funcs ...OptionFunc) *Butler {
 	for _, fn := range funcs {
 		fn(b)
 	}
+	return b
+}
 
+func (b *Butler) Init() {
 	b.initial()
 }
 
@@ -51,6 +54,12 @@ Loop:
 		case sig := <-sigs:
 			log.Printf(">>>>>>>> catch signal %v \n", sig)
 			break Loop
+
+		// ctx timeout
+		case <-b.ctx.Done():
+			log.Printf(">>>>>>>> context cancel %v \n", b.ctx.Err())
+			break Loop
+
 		case worker := <-b.workerQueue:
 			select {
 			case job := <-b.jobQueue:
@@ -80,6 +89,10 @@ func (b *Butler) SetDefaults() {
 	}
 
 	b.jobs = b.workers * 2
+
+	if b.ctx == nil {
+		b.ctx = context.Background()
+	}
 }
 
 // initial butler
@@ -127,5 +140,14 @@ func WithWorkers(n int) OptionFunc {
 func WithJobs(n int) OptionFunc {
 	return func(b *Butler) {
 		b.jobs = n
+	}
+}
+
+func WithContext(ctx context.Context) OptionFunc {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return func(b *Butler) {
+		b.ctx = ctx
 	}
 }

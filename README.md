@@ -10,7 +10,8 @@
 
 ## todo
 
-+ [ ] context cancel 通知退出
++ [x] context cancel 通知退出
 + [x] channel 分发信道
 + [x] signal 通知退出
 + [x] sync.WaitGroup 安全退出
++ [ ] errorgroup
