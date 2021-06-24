@@ -13,7 +13,7 @@ func main() {
 	// b := Defualt()
 
 	b := &butler.Butler{}
-	b.Init(butler.WithJobs(20), butler.WithWorkers(5))
+	b.Init(butler.WithJobs(20), butler.WithWorkers(15))
 
 	go func() {
 		for i := 0; i < 30; i++ {
@@ -33,7 +33,11 @@ func newJob() func() {
 		rand.Seed(time.Now().UnixNano())
 		t := rand.Intn(5)
 		time.Sleep(time.Duration(t) * time.Second)
-		fmt.Printf("job %d: sleep %d \n", rand.Int(), t)
+		jobid := rand.Int()
+		fmt.Printf("job %d: sleep %d \n", jobid, t)
+		if t%2 == 0 {
+			log.Panic(jobid)
+		}
 	}
 
 }
