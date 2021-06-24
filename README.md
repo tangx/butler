@@ -1,12 +1,37 @@
-# bulter 任务管家
+# bulter
 
 ![gopher-butler-256](docs/img/gopher-butler-256.png)
 
-任务管家
+a simple goroute pool manager
+
+![workflow](https://www.plantuml.com/plantuml/proxy?fmt=svg&src=https://raw.githubusercontent.com/tangx/butler/main/docs/workflow.puml)
+
 
 ## Usage
 
 [examples/main.go](__examples__/main.go)
+
+#### get butler
+```
+go get -u github.com/tangx/butler
+```
+
+### demo code
+
+```go
+func demo() {
+	javis := butler.Default()
+
+	go func() {
+		for {
+			javis.AddJobs(func() {})
+			time.Sleep(1 * time.Second)
+		}
+	}()
+
+	javis.Work()
+}
+```
 
 ## todo
 

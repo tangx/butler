@@ -1,0 +1,48 @@
+@startuml butler
+start
+
+:new butler;
+:initial workers;
+
+repeat
+    if (select channel) then (cancel)
+        split
+            :signal;
+            note left
+                os.SIGXXX
+            end note
+        split again
+            :context;
+            note right
+                ctx.Done()
+                context cancel
+            end note
+
+        end split
+        :break loop;
+        :exit gentle;
+        end
+
+    else (worker)
+        partition main_flow{
+            if (select job) then (yes)
+                :assign work;
+                partition worker_flow{
+                    :do work;
+                    :recover panic;
+                    :return worker;
+                }
+                detach
+            endif
+            :return worker;
+            note right
+                return worker into bulter's
+                worker queue if no jobs
+            end note
+        }
+    endif
+
+repeat while
+
+
+@enduml
