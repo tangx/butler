@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
@@ -10,10 +11,16 @@ import (
 )
 
 func main() {
-	// b := Defualt()
 
-	b := &butler.Butler{}
-	b.Init(butler.WithJobs(20), butler.WithWorkers(15))
+	b := butler.Default()
+	// or
+	// b := &butler.Butler{}
+	// b.WithOptions(butler.WithJobs(10), butler.WithWorkers(5))
+
+	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	b.WithOptions(butler.WithContext(ctx))
+
+	b.Init()
 
 	go func() {
 		for i := 0; i < 30; i++ {
@@ -28,7 +35,7 @@ func main() {
 }
 
 func newJob() func() {
-	log.Println("create a new job")
+	// log.Println("create a new job")
 	return func() {
 		rand.Seed(time.Now().UnixNano())
 		t := rand.Intn(5)

@@ -29,12 +29,15 @@ func Default() *Butler {
 	return b
 }
 
-// Init return a new Butler
-func (b *Butler) Init(funcs ...OptionFunc) {
+// WithOptions return a new Butler
+func (b *Butler) WithOptions(funcs ...OptionFunc) *Butler {
 	for _, fn := range funcs {
 		fn(b)
 	}
+	return b
+}
 
+func (b *Butler) Init() {
 	b.initial()
 }
 
@@ -48,12 +51,20 @@ Loop:
 	for {
 		select {
 		// catch a signal and break out loop
-		case sig := <-sigs:
-			log.Printf(">>>>>>>> catch signal %v \n", sig)
+		case <-sigs:
+			// log.Printf(">>>>>>>> catch signal %v \n", sig)
 			break Loop
+
+		// ctx timeout
+		case <-b.ctx.Done():
+			// log.Printf(">>>>>>>> context cancel %v \n", b.ctx.Err())
+			break Loop
+
+		// work when worker and jobs are both ready
 		case worker := <-b.workerQueue:
 			select {
 			case job := <-b.jobQueue:
+				b.wg.Add(1)
 				go b.assign(worker, job)
 			default:
 				// if no jobs, return into worker queue
@@ -80,6 +91,10 @@ func (b *Butler) SetDefaults() {
 	}
 
 	b.jobs = b.workers * 2
+
+	if b.ctx == nil {
+		b.ctx = context.Background()
+	}
 }
 
 // initial butler
@@ -90,7 +105,7 @@ func (b *Butler) initial() {
 
 	b.workerQueue = make(chan *worker, b.workers)
 	for i := 0; i < b.workers; i++ {
-		log.Println("register a new worker")
+		// log.Println("register a new worker")
 		b.workerQueue <- newWorker()
 	}
 
@@ -98,8 +113,7 @@ func (b *Butler) initial() {
 
 // assign a job to a worker
 func (b *Butler) assign(w *worker, job func()) {
-	b.wg.Add(1)
-	defer func() { b.wg.Done() }()
+	defer b.wg.Done()
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -107,7 +121,7 @@ func (b *Butler) assign(w *worker, job func()) {
 		}
 
 		b.workerQueue <- w
-		log.Println("<<< job done, re-assgined")
+		// log.Println("<<< job done, re-assgined")
 	}()
 
 	w.do(job)
@@ -127,5 +141,14 @@ func WithWorkers(n int) OptionFunc {
 func WithJobs(n int) OptionFunc {
 	return func(b *Butler) {
 		b.jobs = n
+	}
+}
+
+func WithContext(ctx context.Context) OptionFunc {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return func(b *Butler) {
+		b.ctx = ctx
 	}
 }
