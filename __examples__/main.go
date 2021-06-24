@@ -1,18 +1,19 @@
-package butler
+package main
 
 import (
 	"fmt"
 	"log"
 	"math/rand"
-	"testing"
 	"time"
+
+	"github.com/tangx/butler"
 )
 
-func Test_Butler(t *testing.T) {
+func main() {
 	// b := Defualt()
 
-	b := &Butler{}
-	b.Init(WithJobs(20), WithWorkers(5))
+	b := &butler.Butler{}
+	b.Init(butler.WithJobs(20), butler.WithWorkers(5))
 
 	go func() {
 		for i := 0; i < 30; i++ {

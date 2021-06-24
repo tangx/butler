@@ -1,7 +1,9 @@
 package butler
 
 import (
+	"context"
 	"log"
+	"os"
 	"runtime"
 )
 
@@ -10,6 +12,8 @@ type Butler struct {
 	workerQueue chan *worker
 	jobs        int
 	jobQueue    chan func()
+
+	ctx context.Context
 }
 
 // Default return a butler , which workers' number is equal GOMAXPROC
@@ -17,7 +21,7 @@ type Butler struct {
 // https://golang.org/doc/effective_go#parallel
 func Default() *Butler {
 	b := &Butler{}
-	b.Init()
+	b.initial()
 	return b
 }
 
@@ -27,17 +31,26 @@ func (b *Butler) Init(funcs ...OptionFunc) {
 		fn(b)
 	}
 
-	b.init()
+	b.initial()
 }
 
 // Work start
 func (b *Butler) Work() {
+	// https://colobu.com/2015/10/09/Linux-Signals/
+	sigs := make(chan os.Signal, 1)
+	// signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	for worker := range b.workerQueue {
-		job := <-b.jobQueue
-		log.Println(">>> a worker accpet a new job")
-		go b.assign(worker, job)
+Loop:
+	for {
+		select {
+		case <-sigs:
+			break Loop
+		case worker := <-b.workerQueue:
+			job := <-b.jobQueue
+			go b.assign(worker, job)
+		}
 	}
+
 }
 
 func (b *Butler) AddJobs(funcs ...func()) {
@@ -52,16 +65,18 @@ func (b *Butler) SetDefaults() {
 	b.jobs = b.workers * 2
 }
 
-// init butler
-func (b *Butler) init() {
+// initial butler
+func (b *Butler) initial() {
 	b.SetDefaults()
 
 	b.jobQueue = make(chan func(), b.jobs)
+
 	b.workerQueue = make(chan *worker, b.workers)
 	for i := 0; i < b.workers; i++ {
 		log.Println("register a new worker")
 		b.workerQueue <- newWorker()
 	}
+
 }
 
 // assign a job to a worker
