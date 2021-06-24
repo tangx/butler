@@ -4,7 +4,7 @@
 
 a simple goroute pool manager
 
-![workflow](https://www.plantuml.com/plantuml/proxy?fmt=svg&src=https://raw.githubusercontent.com/tangx/butler/main/docs/workflow.puml)
+![workflow](https://www.plantuml.com/plantuml/proxy?fmt=svg&src=https://raw.githubusercontent.com/tangx/butler/master/docs/workflow.puml)
 
 
 ## Usage
