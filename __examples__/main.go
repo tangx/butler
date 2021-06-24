@@ -35,7 +35,7 @@ func main() {
 }
 
 func newJob() func() {
-	log.Println("create a new job")
+	// log.Println("create a new job")
 	return func() {
 		rand.Seed(time.Now().UnixNano())
 		t := rand.Intn(5)
