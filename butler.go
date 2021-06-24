@@ -51,24 +51,32 @@ Loop:
 	for {
 		select {
 		// catch a signal and break out loop
-		case <-sigs:
-			// log.Printf(">>>>>>>> catch signal %v \n", sig)
+		case sig := <-sigs:
+			log.Printf(">>>>>>>> catch signal %v \n", sig)
 			break Loop
-
 		// ctx timeout
 		case <-b.ctx.Done():
-			// log.Printf(">>>>>>>> context cancel %v \n", b.ctx.Err())
+			log.Printf(">>>>>>>> context cancel %v \n", b.ctx.Err())
 			break Loop
 
 		// work when worker and jobs are both ready
-		case worker := <-b.workerQueue:
-			select {
-			case job := <-b.jobQueue:
-				b.wg.Add(1)
-				go b.assign(worker, job)
-			default:
-				// if no jobs, return into worker queue
-				b.workerQueue <- worker
+		case job := <-b.jobQueue:
+		JobLoop:
+			// pervent block by worker when worker queue empty
+			for {
+				select {
+				// catch a signal and break out loop
+				case sig := <-sigs:
+					log.Printf(">>>>>>>> catch signal %v \n", sig)
+					break Loop
+				// ctx timeout
+				case <-b.ctx.Done():
+					log.Printf(">>>>>>>> context cancel %v \n", b.ctx.Err())
+					break Loop
+				case worker := <-b.workerQueue:
+					b.assign(worker, job)
+					break JobLoop
+				}
 			}
 		}
 	}
@@ -113,6 +121,7 @@ func (b *Butler) initial() {
 
 // assign a job to a worker
 func (b *Butler) assign(w *worker, job func()) {
+	b.wg.Add(1)
 	defer b.wg.Done()
 
 	defer func() {
