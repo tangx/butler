@@ -1,15 +1,16 @@
 # bulter 任务管家
 
-![123](docs/img/gopher-butler-256.png)
+![gopher-butler-256](docs/img/gopher-butler-256.png)
 
 任务管家
 
 ## Usage
 
-[bulter_test.go](bulter_test.go)
+[examples/main.go](__examples__/main.go)
 
 ## todo
 
-+ [ ] context cancel
-+ [ ] channel cancel
-+ [ ] signal
++ [ ] context cancel 通知退出
++ [x] channel 分发信道
++ [x] signal 通知退出
++ [x] sync.WaitGroup 安全退出
