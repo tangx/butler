@@ -2,19 +2,26 @@ package butler
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"runtime"
 	"sync"
 	"syscall"
+	"time"
 )
 
 type Butler struct {
-	workers     int
+	// active workers
+	workers int
+	// max workers
+	workersCap  int
 	workerQueue chan *worker
-	jobs        int
-	jobQueue    chan func()
+
+	// max jobs queue
+	jobs     int
+	jobQueue chan func()
 
 	ctx context.Context
 	wg  sync.WaitGroup
@@ -41,11 +48,20 @@ func (b *Butler) Init() {
 	b.initial()
 }
 
+func (b *Butler) trace() {
+	for {
+		time.Sleep(500 * time.Millisecond)
+		fmt.Println(len(b.workerQueue), cap(b.workerQueue), "<===>", len(b.jobQueue), cap(b.jobQueue))
+	}
+}
+
 // Work start
 func (b *Butler) Work() {
 	// https://colobu.com/2015/10/09/Linux-Signals/
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go b.trace()
 
 Loop:
 	for {
@@ -79,8 +95,8 @@ Loop:
 					go b.assign(worker, job)
 					break JobLoop
 				default:
-					log.Printf("<<<<<<<< new worker ")
-					b.workerQueue <- newWorker()
+					// try to create a new worker
+					b.hire()
 				}
 			}
 		}
@@ -99,11 +115,11 @@ func (b *Butler) AddJobs(funcs ...func()) {
 
 // SetDefaults set default value for butler
 func (b *Butler) SetDefaults() {
-	if b.workers < 1 {
-		b.workers = runtime.GOMAXPROCS(0)
+	if b.workersCap < 1 {
+		b.workersCap = runtime.GOMAXPROCS(0)
 	}
 
-	b.jobs = b.workers * 2
+	b.jobs = b.workersCap * 2
 
 	if b.ctx == nil {
 		b.ctx = context.Background()
@@ -116,7 +132,7 @@ func (b *Butler) initial() {
 
 	b.jobQueue = make(chan func(), b.jobs)
 
-	b.workerQueue = make(chan *worker, b.workers)
+	b.workerQueue = make(chan *worker, b.workersCap)
 	// for i := 0; i < b.workers; i++ {
 	// 	// log.Println("register a new worker")
 	// 	b.workerQueue <- newWorker()
@@ -141,13 +157,21 @@ func (b *Butler) assign(w *worker, job func()) {
 	w.do(job)
 }
 
+func (b *Butler) hire() {
+	if b.workers < b.workersCap {
+		log.Printf("<<<<<--- hire a new worker\n")
+		b.workerQueue <- newWorker()
+		b.workers++
+	}
+}
+
 // OptionFunc
 type OptionFunc = func(b *Butler)
 
 // WithWorkers set concurrency worker numbers
 func WithWorkers(n int) OptionFunc {
 	return func(b *Butler) {
-		b.workers = n
+		b.workersCap = n
 	}
 }
 

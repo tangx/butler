@@ -21,10 +21,10 @@ func main() {
 	b.Init()
 
 	go func() {
-		for i := 0; i < 30; i++ {
+		for i := 0; i < 50; i++ {
 			fn := newJob()
 			b.AddJobs(fn)
-			time.Sleep(time.Second * 1)
+			time.Sleep(time.Millisecond * 300)
 		}
 	}()
 
@@ -40,7 +40,7 @@ func newJob() func() {
 
 		jobid := rand.Int()
 		fmt.Printf("job %d: sleep %d \n", jobid, t)
-		if t%2 == 0 {
+		if t%4 == 0 {
 			log.Panic(jobid)
 		}
 		time.Sleep(time.Duration(t) * time.Second)
