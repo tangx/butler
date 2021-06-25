@@ -100,6 +100,7 @@ Loop:
 				}
 			}
 		}
+
 	}
 
 	// wait all jobs done
@@ -133,10 +134,6 @@ func (b *Butler) initial() {
 	b.jobQueue = make(chan func(), b.jobs)
 
 	b.workerQueue = make(chan *worker, b.workersCap)
-	// for i := 0; i < b.workers; i++ {
-	// 	// log.Println("register a new worker")
-	// 	b.workerQueue <- newWorker()
-	// }
 
 }
 
@@ -151,7 +148,6 @@ func (b *Butler) assign(w *worker, job func()) {
 		}
 
 		b.workerQueue <- w
-		// log.Println("<<< job done, re-assgined")
 	}()
 
 	w.do(job)
