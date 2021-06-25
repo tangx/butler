@@ -2,19 +2,26 @@ package butler
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"runtime"
 	"sync"
 	"syscall"
+	"time"
 )
 
 type Butler struct {
-	workers     int
+	// active workers
+	workers int
+	// max workers
+	workersCap  int
 	workerQueue chan *worker
-	jobs        int
-	jobQueue    chan func()
+
+	// max jobs queue
+	jobs     int
+	jobQueue chan func()
 
 	ctx context.Context
 	wg  sync.WaitGroup
@@ -41,36 +48,59 @@ func (b *Butler) Init() {
 	b.initial()
 }
 
+func (b *Butler) trace() {
+	for {
+		time.Sleep(500 * time.Millisecond)
+		fmt.Println(len(b.workerQueue), cap(b.workerQueue), "<===>", len(b.jobQueue), cap(b.jobQueue))
+	}
+}
+
 // Work start
 func (b *Butler) Work() {
 	// https://colobu.com/2015/10/09/Linux-Signals/
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
+	// go b.trace()
+
 Loop:
 	for {
 		select {
 		// catch a signal and break out loop
-		case <-sigs:
-			// log.Printf(">>>>>>>> catch signal %v \n", sig)
+		case sig := <-sigs:
+			log.Printf(">>>>>>>> catch signal %v \n", sig)
 			break Loop
-
 		// ctx timeout
 		case <-b.ctx.Done():
-			// log.Printf(">>>>>>>> context cancel %v \n", b.ctx.Err())
+			log.Printf(">>>>>>>> context cancel %v \n", b.ctx.Err())
 			break Loop
 
 		// work when worker and jobs are both ready
-		case worker := <-b.workerQueue:
-			select {
-			case job := <-b.jobQueue:
-				b.wg.Add(1)
-				go b.assign(worker, job)
-			default:
-				// if no jobs, return into worker queue
-				b.workerQueue <- worker
+		case job := <-b.jobQueue:
+
+		JobLoop:
+			// pervent block by worker when worker queue empty
+			for {
+				select {
+				// catch a signal and break out loop
+				case sig := <-sigs:
+					log.Printf(">>>>>>>> catch signal %v \n", sig)
+					break Loop
+				// ctx timeout
+				case <-b.ctx.Done():
+					log.Printf(">>>>>>>> context cancel %v \n", b.ctx.Err())
+					break Loop
+				case worker := <-b.workerQueue:
+					job := job
+					go b.assign(worker, job)
+					break JobLoop
+				default:
+					// try to create a new worker
+					b.hire()
+				}
 			}
 		}
+
 	}
 
 	// wait all jobs done
@@ -86,11 +116,11 @@ func (b *Butler) AddJobs(funcs ...func()) {
 
 // SetDefaults set default value for butler
 func (b *Butler) SetDefaults() {
-	if b.workers < 1 {
-		b.workers = runtime.GOMAXPROCS(0)
+	if b.workersCap < 1 {
+		b.workersCap = runtime.GOMAXPROCS(0)
 	}
 
-	b.jobs = b.workers * 2
+	b.jobs = b.workersCap * 2
 
 	if b.ctx == nil {
 		b.ctx = context.Background()
@@ -103,16 +133,13 @@ func (b *Butler) initial() {
 
 	b.jobQueue = make(chan func(), b.jobs)
 
-	b.workerQueue = make(chan *worker, b.workers)
-	for i := 0; i < b.workers; i++ {
-		// log.Println("register a new worker")
-		b.workerQueue <- newWorker()
-	}
+	b.workerQueue = make(chan *worker, b.workersCap)
 
 }
 
 // assign a job to a worker
 func (b *Butler) assign(w *worker, job func()) {
+	b.wg.Add(1)
 	defer b.wg.Done()
 
 	defer func() {
@@ -121,10 +148,17 @@ func (b *Butler) assign(w *worker, job func()) {
 		}
 
 		b.workerQueue <- w
-		// log.Println("<<< job done, re-assgined")
 	}()
 
 	w.do(job)
+}
+
+func (b *Butler) hire() {
+	if b.workers < b.workersCap {
+		log.Printf("<<<<<--- hire a new worker\n")
+		b.workerQueue <- newWorker()
+		b.workers++
+	}
 }
 
 // OptionFunc
@@ -133,7 +167,7 @@ type OptionFunc = func(b *Butler)
 // WithWorkers set concurrency worker numbers
 func WithWorkers(n int) OptionFunc {
 	return func(b *Butler) {
-		b.workers = n
+		b.workersCap = n
 	}
 }
 
