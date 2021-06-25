@@ -61,7 +61,7 @@ func (b *Butler) Work() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	go b.trace()
+	// go b.trace()
 
 Loop:
 	for {
