@@ -14,7 +14,7 @@ func main() {
 	// b := butler.Default()
 	// or
 	b := &butler.Butler{}
-	b.WithOptions(butler.WithJobs(10), butler.WithWorkers(1))
+	b.WithOptions(butler.WithJobs(10), butler.WithWorkers(5))
 
 	// ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
 	// b.WithOptions(butler.WithContext(ctx))
@@ -43,7 +43,7 @@ func newJob() func() {
 		if t%2 == 0 {
 			log.Panic(jobid)
 		}
-		time.Sleep(time.Duration(t) * time.Second)
+		time.Sleep(time.Duration(20) * time.Second)
 	}
 
 }

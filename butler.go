@@ -2,12 +2,14 @@ package butler
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"runtime"
 	"sync"
 	"syscall"
+	"time"
 )
 
 type Butler struct {
@@ -61,9 +63,12 @@ Loop:
 
 		// work when worker and jobs are both ready
 		case job := <-b.jobQueue:
-		JobLoop:
+
+			// JobLoop:
 			// pervent block by worker when worker queue empty
 			for {
+				fmt.Println("in jobloop: ")
+				time.Sleep(300 * time.Millisecond)
 				select {
 				// catch a signal and break out loop
 				case sig := <-sigs:
@@ -74,8 +79,15 @@ Loop:
 					log.Printf(">>>>>>>> context cancel %v \n", b.ctx.Err())
 					break Loop
 				case worker := <-b.workerQueue:
+					job := job
 					b.assign(worker, job)
-					break JobLoop
+					// break JobLoop
+				default:
+
+					fmt.Printf("in job loop: %p\n", job)
+					time.Sleep(time.Millisecond * 500)
+					log.Printf("<<<<<<<< new worker ")
+					b.workerQueue <- newWorker()
 				}
 			}
 		}
@@ -112,10 +124,10 @@ func (b *Butler) initial() {
 	b.jobQueue = make(chan func(), b.jobs)
 
 	b.workerQueue = make(chan *worker, b.workers)
-	for i := 0; i < b.workers; i++ {
-		// log.Println("register a new worker")
-		b.workerQueue <- newWorker()
-	}
+	// for i := 0; i < b.workers; i++ {
+	// 	// log.Println("register a new worker")
+	// 	b.workerQueue <- newWorker()
+	// }
 
 }
 
