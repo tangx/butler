@@ -43,7 +43,7 @@ func newJob() func() {
 		if t%2 == 0 {
 			log.Panic(jobid)
 		}
-		time.Sleep(time.Duration(20) * time.Second)
+		time.Sleep(time.Duration(t) * time.Second)
 	}
 
 }
